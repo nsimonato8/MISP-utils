@@ -27,18 +27,23 @@ logging.basicConfig(
     ]
 )
 
-def load_json_file(file_path: str) -> dict:
+def load_json_file(file_path: str, silent: bool) -> dict:
     """Load and return data from a JSON file."""
     try:
-        logging.info(f"Loading JSON file: {file_path}")
+        if not silent:
+            logging.info(f"Loading JSON file: {file_path}")
         with open(file_path, encoding='utf8', mode='r') as file:
             data = json.load(file)
 
-        logging.info(f"Successfully loaded JSON file: {file_path}")
+        if not silent:
+            logging.info(f"Successfully loaded JSON file: {file_path}")
         return data
 
     except Exception as e:
-        logging.error(f"Error loading JSON file: {e}")
+        if not silent:
+            logging.error(f"Error loading JSON file: {e}")
+        
+        return {}
         
  
 def check_fields(present_fields: list[str], silent: bool) -> bool:
@@ -192,7 +197,8 @@ def check_configuration_file(file: dict, silent: bool) -> bool:
     Prints what's wrong with the file, is silent is False, otherwise just checks if the file is a valid MISP taxonomy file and returns a boolean.
     """
     if not bool(file):
-        logging.error("File is empty, check for trailing commas.")
+        if not silent:
+            logging.error("File is empty, check for trailing commas.")
         return False
 
     return check_fields(file.keys(), silent) and check_predicates(file.get('predicates', {}), silent) and check_values(file.get('values', {}), silent) and check_matches(file, silent)
@@ -210,14 +216,14 @@ def main():
     args = parser.parse_args()
 
     # Load JSON file
-    data = load_json_file(args.file)
+    data = load_json_file(args.file, args.silent)
 
     result = check_configuration_file(data, args.silent)
     
     if not args.silent:
         print(f"The input file is {'NOT ' if not result else ''}a valid configuration file")
         
-    return result
+    sys.exit(int(result))
     
 
 if __name__ == "__main__":
