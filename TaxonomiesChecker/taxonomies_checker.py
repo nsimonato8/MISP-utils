@@ -18,7 +18,7 @@ class FreezableDict(dict):
             self.__frozen_keys.append(key)
 
     def __setitem__ (self, key, value):
-        if self.__frozen:
+        if self.__frozen and key not in self:
             raise KeyError(f'Cannot add {value} to {key}, the FreezableDict is frozen.')
         if key in self.__frozen_keys:
             raise ValueError(f'Key {key} is frozen, cannot modify its value.')
@@ -189,7 +189,6 @@ def check_matches(file: dict, silent: bool) -> bool:
         for v in val['entry']:
             try:
                 matches[val['predicate']] = v['value']
-                matches.freeze(val['predicate'])
             except ValueError:
                 result = False
                 if not silent:
@@ -198,6 +197,8 @@ def check_matches(file: dict, silent: bool) -> bool:
                 result = False
                 if not silent:
                     logging.error(f"The value {v['value']} has no valid matching predicate, as {val['predicate']} was not defined.")
+    
+        matches.freeze(val['predicate'])
     
     return result    
 
