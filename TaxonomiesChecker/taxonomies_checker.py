@@ -8,14 +8,20 @@ import logging
 from functools import reduce
 
 class FreezableDict(dict):
+    __frozen_keys = []
     __frozen = False
 
-    def freeze (self):
-        self.__frozen = True
+    def freeze(self, key=None):
+        if key is None:
+            self.__frozen = True
+        if key in self:
+            self.__frozen_keys.append(key)
 
     def __setitem__ (self, key, value):
-        if self.__frozen and key not in self:
-            raise ValueError('Dictionary is frozen')
+        if self.__frozen:
+            raise KeyError(f'Cannot add {value} to {key}, the FreezableDict is frozen.')
+        if key in self.__frozen_keys:
+            raise ValueError(f'Key {key} is frozen, cannot modify its value.')
         super().__setitem__(key, value)
 
 # Configure logging
@@ -175,7 +181,7 @@ def check_matches(file: dict, silent: bool) -> bool:
     values = file.get('values', {})
     
     for pred in predicates:
-        matches[pred['value']] = []
+        matches[pred['value']] = []    
         
     matches.freeze()
     
@@ -183,7 +189,12 @@ def check_matches(file: dict, silent: bool) -> bool:
         for v in val['entry']:
             try:
                 matches[val['predicate']] = v['value']
-            except:
+                matches.freeze(val['predicate'])
+            except ValueError:
+                result = False
+                if not silent:
+                    logging.error(f"The key {v['value']} was already defined, it must a be duplicate definition.")
+            except KeyError:
                 result = False
                 if not silent:
                     logging.error(f"The value {v['value']} has no valid matching predicate, as {val['predicate']} was not defined.")
